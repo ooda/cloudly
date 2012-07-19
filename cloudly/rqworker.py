@@ -17,8 +17,14 @@ def _get_queue():
     return Queue(connection=redis)
 
 
-if __name__ == '__main__':
+def work(setup_fct=None):
+    if setup_fct:
+        setup_fct()
     listen = ['high', 'default', 'low']
     with Connection(redis):
         worker = Worker(map(Queue, listen))
         worker.work()
+
+
+if __name__ == '__main__':
+    work()
