@@ -47,6 +47,16 @@ def get_own():
         raise NoEc2Instance("Cannot find instance %r" % instance_id)
 
 
+def find_service_ip(service):
+    """Return a list of ip addresses offering the given service. This uses the
+    'services' tag of an EC2 instance.
+    """
+    hosts = filter(lambda h: service in h.services, all())
+    if not hosts:
+        return None
+    return [get_best_ip_addresse(host) for host in hosts]
+
+
 @Memoized
 def is_running_on_ec2():
     if _query():
