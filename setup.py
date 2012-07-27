@@ -14,5 +14,5 @@ setup(
     url='https://github.com/ooda/cloudly',
     license="Proprietary",
     packages=find_packages(exclude=('tests', 'docs')),
-    install_requires=['distribute', 'boto', 'redis', 'rq']
+    install_requires=['distribute', 'boto', 'redis', 'rq', 'couchdb']
 )
