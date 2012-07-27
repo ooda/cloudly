@@ -7,8 +7,8 @@ from cloudly.memoized import Memoized
 
 @Memoized
 def get_conn():
-    ip_addresses = (os.environ.get("REDIS_SERVER") or
-                    ec2.find_service_ip('redis-server') or 
+    ip_addresses = (os.environ.get("REDIS_HOST") or
+                    ec2.find_service_ip('redis') or 
                     ["127.0.0.1"])
 
     redis_url = os.getenv('REDISTOGO_URL',  # Set when on Heroku.

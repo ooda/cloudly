@@ -1,12 +1,9 @@
 from datetime import datetime
 
 import isodate
+from cloudly.memoized import Memoized
 
 import boto.s3.connection as s3
-
-
-# Initialize the connection to S3.
-connection = s3.S3Connection()
 
 
 class S3KeyNotFoundException(Exception):
@@ -14,7 +11,7 @@ class S3KeyNotFoundException(Exception):
 
 
 def set(bucket_name, key_name, obj, metadata=None):
-    bucket = connection.get_bucket(bucket_name)
+    bucket = _get_conn().get_bucket(bucket_name)
     # Check if a particular key exists.
     key = bucket.get_key(key_name)
     if key is None:
@@ -47,7 +44,7 @@ def get(bucket_name, key_name, metakeys=None):
 
 
 def list_key_names(bucket_name):
-    return [key.key for key in connection.get_bucket(bucket_name)]
+    return [key.key for key in _get_conn().get_bucket(bucket_name)]
 
 
 def delete(key_name, bucket_name="default"):
@@ -56,11 +53,16 @@ def delete(key_name, bucket_name="default"):
 
 
 def _get_key(key_name, bucket_name="default"):
-    bucket = connection.get_bucket(bucket_name)
+    bucket = _get_conn().get_bucket(bucket_name)
     key = bucket.get_key(key_name)
     if key is None:
         raise S3KeyNotFoundException(key_name)
     return key
+
+
+@Memoized
+def _get_conn():
+    return s3.S3Connection()
 
 
 def _encode(obj):
