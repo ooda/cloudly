@@ -1,0 +1,76 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import itertools
+import subprocess
+from optparse import OptionParser
+
+import boto.ec2.connection as ec2
+
+
+def _get_instances():
+    connection = ec2.EC2Connection()
+    instances = map(lambda r: r.instances, connection.get_all_instances())
+    return list(itertools.chain.from_iterable(instances))
+
+
+def _print_instances(instances, show_terminated=False):
+    """Print out list of hosts. Set only_running to false
+    to also print out turned off machines."""
+    for index, instance in enumerate(instances):
+        if instance.state == "running" or show_terminated:
+            sys.stdout.write(("{index:>4}: {name:<20} "
+                              "{instance.ip_address:<16} "
+                              "{launch_time:<12} {instance.id:<12} "
+                              "{instance.image_id:<13}\n").format(
+                                  index=index,
+                                  instance=instance,
+                                  launch_time=instance.launch_time[:10],
+                                  name=instance.tags.get("Name", "no name")
+                              ))
+
+
+def _choose_host():
+    instances = _get_instances()
+    if len(instances) == 1:
+        return instances[0].public_dns_name
+    _print_instances(instances)
+    index = raw_input("\nChoose AMI instance (None): ")
+    host = None
+    if index.isdigit() and int(index) < len(instances):
+        host = instances[int(index)].public_dns_name
+    return host
+
+
+def _parse_options():
+    parser = OptionParser()
+    # Options for the daemonize module.
+    parser.add_option("-t", "--tunnel", action="store_false", dest="tunnel",
+                      default=False,
+                      help="Open a tunnel on port 8000 of the remote.")
+    return parser.parse_args()
+
+
+def connect(hostname, options):
+    key = "$AWS_DIR/key_pairs/$EC2_KEYPAIR.pem"
+    cmd = "ssh %s -i %s ubuntu@%s" % (options, key, hostname)
+    print "Executing ", cmd
+    process = subprocess.Popen(cmd, shell=True)
+    process.wait()
+
+
+if __name__ == "__main__":
+    if "EC2_KEYPAIR" not in os.environ:
+        print "EC2_KEYPAIR environment variable not defined."
+        sys.exit(1)
+
+    ssh_options = ""
+    options, args = _parse_options()
+    if options.tunnel:
+        localhost = os.environ["HOSTNAME"]
+        ssh_options = "-R 8000:" + localhost + ":8000"
+
+    hostname = _choose_host()
+    if hostname:
+        connect(hostname, ssh_options)

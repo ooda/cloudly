@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# Ubuntu 12.04 64-bit server (EBS boot)
+ec2run -t t1.micro -k $USER -g basic ami-82fa58eb
