@@ -52,8 +52,6 @@ def find_service_ip(service):
     'services' tag of an EC2 instance.
     """
     hosts = filter(lambda h: service in h.services, all())
-    if not hosts:
-        return None
     return [get_best_ip_addresse(host) for host in hosts]
 
 
