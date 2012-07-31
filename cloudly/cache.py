@@ -16,7 +16,11 @@ def get_conn():
         - look for an EC2 hosted server offering the service 'redis', else
         - use localhost, 127.0.0.1.
     """
-    service_ips = ec2.find_service_ip('redis')
+    try:
+        service_ips = ec2.find_service_ip('redis')
+    except Exception, exception:
+        log.warning(exception)
+        service_ips = []
 
     ip_address = (os.environ.get("REDIS_HOST") or
                   service_ips[0] if service_ips else None or 
