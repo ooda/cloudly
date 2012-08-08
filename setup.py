@@ -15,5 +15,6 @@ setup(
     license="Proprietary",
     packages=find_packages(exclude=('tests', 'docs')),
     scripts=['bin/sshaws', 'bin/launch'],
-    install_requires=['distribute', 'boto', 'redis', 'rq', 'couchdb']
+    install_requires=['distribute', 'boto', 'redis', 'rq', 'couchdb',
+                      'python-memcached']
 )

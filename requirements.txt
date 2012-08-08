@@ -2,3 +2,4 @@ nose
 boto
 redis
 couchdb
+python-memcached
