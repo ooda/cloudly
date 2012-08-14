@@ -4,8 +4,9 @@ from rq.job import Job
 from cloudly.cache import redis
 from cloudly.memoized import Memoized
 
-def enqueue(function, *args):
-    return _get_queue().enqueue(function, *args)
+
+def enqueue(function, *args, **kwargs):
+    return _get_queue().enqueue(function, *args, **kwargs)
 
 
 def fetch_job(job_id):
