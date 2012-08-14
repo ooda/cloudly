@@ -4,6 +4,7 @@ coating.
 
 import os
 import json
+from urlparse import urlparse
 
 import memcache
 import redis as pyredis
@@ -16,7 +17,7 @@ log = logger.init(__name__)
 
 
 @Memoized
-def get_redis_connection():
+def get_redis_connection(max_connections=None):
     """ Get a connection to a Redis server. The priority is:
         - look for an environment variable REDIS_HOST, else
         - look for an EC2 hosted server offering the service 'redis', else
@@ -36,20 +37,30 @@ def get_redis_connection():
                           'redis://{}:6379'.format(ip_address))
 
     log.info("Connecting to Redis server at {}".format(redis_url))
-    return pyredis.from_url(redis_url)
+
+    # Create connection pool and instantiate redis connection.
+    url = urlparse(redis_url)
+    try:
+        db = int(url.path.replace('/', ''))
+    except (AttributeError, ValueError):
+        db = 0
+    pool = pyredis.ConnectionPool(host=url.hostname, port=url.port, db=db,
+                                  password=url.password,
+                                  max_connections=max_connections)
+    redis = pyredis.Redis(connection_pool=pool)
+
+    # Add some utility function to module redis. These functions first
+    # serialize to/from JSON the given object, then call redis.
+    def redis_jget(key):
+        value = redis.get(key)
+        return json.loads(value) if value else None
+
+    redis.jset = lambda key, obj: redis.set(key, json.dumps(obj))
+    redis.jget = redis_jget
+    return redis
 
 
 redis = get_redis_connection()
-
-
-# Add some utility function to module redis. These function first serialize
-# to/from JSON the given object.
-def redis_jget(key):
-    value = redis.get(key)
-    return json.loads(value) if value else None
-
-redis.jset = lambda key, obj: redis.set(key, json.dumps(obj))
-redis.jget = redis_jget
 
 
 @Memoized
