@@ -60,9 +60,6 @@ def get_redis_connection(max_connections=None):
     return redis
 
 
-redis = get_redis_connection()
-
-
 @Memoized
 def get_memcache_connection():
     return memcache.Client(['127.0.0.1:11211'], debug=0)

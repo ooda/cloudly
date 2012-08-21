@@ -1,7 +1,7 @@
 from rq import Worker, Queue, Connection
 from rq.job import Job
 
-from cloudly.cache import redis
+from cloudly.cache import get_redis_connection
 from cloudly.memoized import Memoized
 
 
@@ -10,19 +10,19 @@ def enqueue(function, *args, **kwargs):
 
 
 def fetch_job(job_id):
-    return Job.fetch(job_id, redis)
+    return Job.fetch(job_id, get_redis_connection())
 
 
 @Memoized
 def _get_queue():
-    return Queue(connection=redis)
+    return Queue(connection=get_redis_connection())
 
 
 def work(setup_fct=None):
     if setup_fct:
         setup_fct()
     listen = ['high', 'default', 'low']
-    with Connection(redis):
+    with Connection(get_redis_connection()):
         worker = Worker(map(Queue, listen))
         worker.work()
 
