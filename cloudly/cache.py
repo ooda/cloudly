@@ -19,19 +19,22 @@ log = logger.init(__name__)
 @Memoized
 def get_redis_connection(max_connections=None):
     """ Get a connection to a Redis server. The priority is:
-        - look for an environment variable REDIS_HOST, else
+        - look for an environment variable REDISTOGO_URL (Heroku), else
+        - look for an environment variable REDIS_URL, else
         - look for an EC2 hosted server offering the service 'redis', else
         - use localhost, 127.0.0.1.
     """
-    try:
-        service_ips = ec2.find_service_ip('redis')
-    except Exception, exception:
-        log.warning(exception)
-        service_ips = []
+    
+    ip_address = os.environ.get("REDIS_URL")
+    if not ip_address:
+        try:
+            service_ips = ec2.find_service_ip('redis')
+            ip_address = service_ips[0] if service_ips else None
+        except Exception, exception:
+            log.info(exception)
 
-    ip_address = (os.environ.get("REDIS_HOST") or
-                  service_ips[0] if service_ips else None or
-                  "127.0.0.1")
+    if not ip_address:
+        ip_address ="127.0.0.1"
 
     redis_url = os.getenv('REDISTOGO_URL',  # Set when on Heroku.
                           'redis://{}:6379'.format(ip_address))
