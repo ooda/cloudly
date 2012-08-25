@@ -3,3 +3,4 @@ boto
 redis
 couchdb
 python-memcached
+isodate
