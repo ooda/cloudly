@@ -1,6 +1,7 @@
 nose
 boto
 redis
+rq
 couchdb
 python-memcached
 isodate
