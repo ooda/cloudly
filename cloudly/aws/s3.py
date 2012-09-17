@@ -10,7 +10,7 @@ class S3KeyNotFoundException(Exception):
     """S3 key not found."""
 
 
-def set(bucket_name, key_name, obj, metadata=None):
+def set(bucket_name, key_name, obj, metadata=None, acl=None):
     bucket = _get_conn().get_bucket(bucket_name)
     # Check if a particular key exists.
     key = bucket.get_key(key_name)
@@ -26,6 +26,8 @@ def set(bucket_name, key_name, obj, metadata=None):
             key.set_metadata(meta, _encode(data))
     # Store the document as a string.
     key.set_contents_from_string(obj)
+    if acl:
+        key.set_acl(acl)
     return key.key
 
 

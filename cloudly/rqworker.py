@@ -18,12 +18,14 @@ def _get_queue():
     return Queue(connection=get_redis_connection())
 
 
-def work(setup_fct=None):
+def work(setup_fct=None, exc_handler=None):
     if setup_fct:
         setup_fct()
     listen = ['high', 'default', 'low']
     with Connection(get_redis_connection()):
         worker = Worker(map(Queue, listen))
+        if exc_handler:
+            worker.push_exc_handler(exc_handler)
         worker.work()
 
 
