@@ -1,7 +1,8 @@
 import logging
+from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL  # noqa
 
 FORMAT = "%(asctime)s] %(levelname)s %(module)s %(funcName)s: %(message)s"
-DEFAULT_LOG_LEVEL = logging.INFO
+DEFAULT_LOG_LEVEL = INFO
 DEFAULT_LOGFILE = "cloudly.log"
 
 
