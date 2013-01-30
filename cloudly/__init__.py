@@ -1,1 +1,5 @@
-__version__ = "1.1.0"
+__title__ = "cloudly"
+__version__ = "1.1.1"
+__author__ = "Hugues Demers"
+__license__ = "MIT"
+__copyright__ = "Copyright 2013 OODA Technologies inc."
