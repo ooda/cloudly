@@ -27,8 +27,7 @@ def work(setup_fct=None, exc_handler=None, log_level=logging.WARN):
     listen = ['high', 'default', 'low']
     with Connection(get_redis_connection()):
         worker = Worker(map(Queue, listen))
-        configure_logger(worker.log, log_level=logging.INFO)
-        configure_logger(worker.horse_logger, log_level=logging.WARNING)
+        configure_logger(worker.log, log_level=log_level)
         if exc_handler:
             worker.push_exc_handler(exc_handler)
         worker.work()
