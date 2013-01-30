@@ -1,7 +1,6 @@
-nose
-boto
-redis
-rq
-couchdb
-python-memcached
-isodate
+boto==2.7.0
+redis==2.7.2
+rq==0.3.4
+couchdb==0.8
+python-memcached==1.48
+isodate==0.4.9
