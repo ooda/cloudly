@@ -4,3 +4,4 @@ rq==0.3.4
 couchdb==0.8
 python-memcached==1.48
 isodate==0.4.9
+cuisine==0.5.1
