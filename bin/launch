@@ -1,4 +1,7 @@
 #!/bin/sh
 
-# Ubuntu 12.04 64-bit server (EBS boot)
-ec2run -t t1.micro -k $USER -g basic ami-82fa58eb
+# Use the instance locator at
+# http://cloud-images.ubuntu.com/locator/ec2/
+
+# Ubuntu 12.10 64-bit server EBS boot in us-east-1.
+ec2run -t t1.micro -k $USER -g basic ami-0cdf4965
