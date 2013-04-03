@@ -5,8 +5,11 @@ import boto.ec2 as ec2
 from boto.exception import EC2ResponseError
 
 from cloudly.memoized import Memoized
+from cloudly import logger
 
 EC2_METADATA_URL = "http://169.254.169.254/latest/meta-data/"
+
+log = logger.init(__name__)
 
 
 class NoEc2Instance(Exception):
@@ -18,8 +21,10 @@ class NoEc2Instance(Exception):
 def all():
     """Fetches all EC2 instances currently running."""
     connection = ec2.connection.EC2Connection()
-    instance_list = map(lambda r: r.instances, connection.get_all_instances())
-    return map(augment, itertools.chain.from_iterable(instance_list))
+    instance_list = itertools.chain.from_iterable(
+        [r.instances for r in connection.get_all_instances()])
+    running = [i for i in instance_list if i.state == "running"]
+    return map(augment, running)
 
 
 def get(node_type):
@@ -53,6 +58,21 @@ def find_service_ip(service):
     """
     hosts = filter(lambda h: service in h.services, all())
     return [get_best_ip_addresse(host) for host in hosts]
+
+
+def get_hostname(service):
+    """Return the first host's IP address hosting the given service.
+    """
+    try:
+        hosts = find_service_ip(service)
+    except Exception, exception:
+        # An exception is thrown whenever AWS credentials are not presented
+        # in the environment. That's ok. We'll use localhost.
+        log.info(exception)
+        hosts = []
+    # Use the first host in the returned list. Could be changed by adding an
+    # argument which would be a function for choosing amidst the list.
+    return hosts[0] if hosts else None
 
 
 @Memoized
