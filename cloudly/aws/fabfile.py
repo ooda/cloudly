@@ -16,10 +16,9 @@ from fabric.api import (
     run, env, cd, settings, puts, runs_once, task
 )
 from fabric.operations import prompt
-from cuisine import (package_ensure, package_update, file_write,
-                     python_package_ensure, mode_sudo)
 
 from cloudly.aws import ec2
+from cloudly import deployment
 import boto
 
 DEFAULT_AMI = "ami-82fa58eb"
@@ -52,15 +51,22 @@ env.roledefs = dict([
 
 
 def set_environment(fn):
-    """Dynamically set environment variables for tasks."""
+    """Dynamically set fabric environment for wrapped tasks.
+    The environment set-up include:
+        - user
+        - key_filename
+        - key_name
+    """
     @functools.wraps(fn)
     def wrapped_fn(*args, **kwargs):
+        key_name = getpass.getuser()
         key_filename = "{}/key_pairs/{}.pem".format(
             os.environ["AWS_DIR"],
-            getpass.getuser()
+            key_name,
         )
-        with settings(user=AWS_USERNAME, key_filename=key_filename,
-                      key_name=getpass.getuser()):
+        with settings(user=AWS_USERNAME,
+                      key_filename=key_filename,
+                      key_name=key_name):
             return fn(*args, **kwargs)
 
     return wrapped_fn
@@ -82,12 +88,10 @@ def print_instances(instances, show_terminated=False):
             ))
 
 
-def choose_ec2_host(node_type=None):
+# Please read http://stackoverflow.com/q/2326797 before modifying this.
+@task
+def ec2host(node_type=None):
     """Ask the user which running EC2 instance he wants to act upon."""
-    # Only do this if there is no host already set.
-    if env.hosts:
-        return
-
     # Grab instances of a certain type or all of them.
     if node_type:
         instances = ec2.get(node_type)
@@ -175,47 +179,6 @@ def list():
     )
 
 
-PACKAGES = [
-    "python-distribute",
-    "python-dev",
-    "gcc",
-    "redis-server",
-    "couchdb",
-    "daemontools",
-    "git"
-]
-
-BASH_LOGIN = """
-export WORKON_HOME=$HOME/.virtualenvs
-mkdir -p $WORKON_HOME
-
-VIRTUALENVWRAPPER=/usr/local/bin/virtualenvwrapper.sh
-if [ -f $VIRTUALENVWRAPPER ]; then
-    source $VIRTUALENVWRAPPER
-fi
-"""
-
-
-def standard_setup():
-    """Set up an AWS EC2 instance:
-
-        1. Update all packages
-        2. Install packages we need
-        3. Install pip
-        4. Install virtualenvwrapper
-    """
-    package_update()
-    package_ensure(PACKAGES)
-    # Install pip
-    run("curl https://raw.github.com/pypa/pip/master/contrib/get-pip.py | "
-        "sudo python")
-    # Install virtualenv and virtualenvwrapper
-    with mode_sudo():
-        python_package_ensure("virtualenvwrapper")
-    # Add virtualenvwrapper initialization to bashrc
-    file_write("$HOME/.bash_login", BASH_LOGIN)
-
-
 @task
 @set_environment
 def launch(ami_image_id=DEFAULT_AMI, count=1):
@@ -246,7 +209,7 @@ def launch(ami_image_id=DEFAULT_AMI, count=1):
     with settings(hosts=[instance.public_dns_name for instance in instances]):
         puts(env.hosts)
         puts(env.user)
-        standard_setup()
+        deployment.standard_setup()
 
 
 @task
