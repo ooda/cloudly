@@ -1,7 +1,7 @@
 import boto
 import json
 
-from cloudly.memoized import Memoized
+from cloudly.decorators import Memoized
 
 
 def publish(topic_arn, message, subject=None):
@@ -11,7 +11,6 @@ def publish(topic_arn, message, subject=None):
 
 def subscribe(topic_arn, protocol, endpoint):
     _get_conn().subscribe(topic_arn, protocol, endpoint)
-
 
 
 @Memoized

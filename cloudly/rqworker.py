@@ -4,7 +4,7 @@ from rq import Worker, Queue, Connection
 from rq.job import Job
 
 from cloudly.cache import get_redis_connection
-from cloudly.memoized import Memoized
+from cloudly.decorators import Memoized
 from cloudly.logger import configure_logger
 from cloudly import logger
 

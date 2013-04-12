@@ -7,7 +7,7 @@ import isodate
 
 from cloudly import logger
 from cloudly.aws import ec2
-from cloudly.memoized import Memoized
+from cloudly.decorators import Memoized
 
 CUBE_UDP_PORT = 1180
 CUBE_EVALUATOR_PORT = 1081

@@ -9,7 +9,7 @@ import memcache
 import redis
 
 from cloudly.aws import ec2
-from cloudly.memoized import Memoized
+from cloudly.decorators import Memoized
 import cloudly.logger as logger
 
 log = logger.init(__name__)
