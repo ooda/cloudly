@@ -1,3 +1,5 @@
+"""Publish to [PubNub](http://www.pubnub.com/).
+"""
 import os
 import logging
 

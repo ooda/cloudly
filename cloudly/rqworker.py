@@ -1,3 +1,8 @@
+"""
+Utilities around [RQ](http://python-rq.org/) workers and jobs.
+
+"""
+
 import logging
 
 from rq import Worker, Queue, Connection

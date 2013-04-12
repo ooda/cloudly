@@ -1,3 +1,6 @@
+"""Publish to a predefined notification topic on SNS.
+For errors, warning and general notifications.
+"""
 import os
 
 from cloudly.aws.sns import _get_conn
