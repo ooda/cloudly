@@ -62,10 +62,11 @@ def burst(nbursts=2):
     """
     def decorator(fn):
         cache = []
+
         @wraps(fn)
         def wrapped_fn(*args, **kwargs):
             cache.extend(args[0])
-            result = ""
+            result = None
             if len(cache) >= nbursts:
                 result = fn(cache, *args[1:], **kwargs)
                 del cache[:]

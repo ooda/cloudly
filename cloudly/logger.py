@@ -1,3 +1,9 @@
+"""A standardized logger.
+
+The log level can be configured using the environment variable
+CLOUDLY_LOG_LEVEL. Otherwise, defaults to 'info'.
+
+"""
 import os
 import logging
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL  # noqa
@@ -23,13 +29,19 @@ except KeyError, exception:
 
 
 def init(name, log_level=default_log_level):
-    # Create logger and formatter
+    """Create logger with a default format. """
     logger = logging.getLogger(name)
     configure_logger(logger, log_level)
     return logger
 
 
 def configure_logger(logger, log_level, log_to_file=False):
+    """Configure the given logger with:
+
+        - the given log level
+        - a console handler
+        - a file handler if log_to_file is True.
+    """
     logger.setLevel(log_level)
     formatter = logging.Formatter(FORMAT)
 

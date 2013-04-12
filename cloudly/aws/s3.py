@@ -1,7 +1,7 @@
 from datetime import datetime
 
 import isodate
-from cloudly.memoized import Memoized
+from cloudly.decorators import Memoized
 
 import boto.s3.connection as s3
 
