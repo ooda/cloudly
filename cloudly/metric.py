@@ -1,3 +1,5 @@
+"""Metrics logged to a [Cube](http://square.github.io/cube/) server.
+"""
 import os
 import json
 import socket
@@ -27,16 +29,18 @@ def event(evt_type, data=None):
 
 
 @Memoized
-def get_cube_host():
-    host = os.environ.get("CUBE_HOST")
-    if not host:
-        try:
-            service_ips = ec2.find_service_ip('cube')
-            host = service_ips[0]
-        except Exception, exception:
-            log.warning(exception)
-            raise Exception("Cannot connect to Cube service.")
-    return host
+def get_cube_host(hostname=None):
+    """Get the hostname for the Cube server. These are tried, in order:
+        - an environment variable CUBE_HOST;
+        - an EC2 hosted server offering the service 'cube';
+        - 127.0.0.1.
+    """
+    return (
+        hostname or
+        os.environ.get("CUBE_HOST") or
+        ec2.get_hostname("cube") or
+        "127.0.0.1"
+    )
 
 
 def _send(data):
