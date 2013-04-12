@@ -27,7 +27,7 @@ def get_redis_connection(hostname=None, port=None):
     host = (
         hostname or
         os.environ.get("REDIS_HOST") or
-        ec2.get_hostname("couchdb") or
+        ec2.get_hostname("redis") or
         "127.0.0.1"
     )
     port = port or os.environ.get("REDIS_PORT", 6379)
