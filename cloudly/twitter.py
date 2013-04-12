@@ -1,3 +1,9 @@
+"""Utility functions to:
+    - track
+    - sample
+    - follow list
+a Twitter Stream.
+"""
 import os
 import json
 

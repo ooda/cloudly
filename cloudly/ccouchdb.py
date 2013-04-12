@@ -7,7 +7,7 @@ import yaml
 
 import couchdb
 
-from cloudly.memoized import Memoized
+from cloudly.decorators import Memoized
 import cloudly.logger as logger
 from cloudly.aws import ec2
 

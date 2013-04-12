@@ -4,7 +4,7 @@ import urllib
 import boto.ec2 as ec2
 from boto.exception import EC2ResponseError
 
-from cloudly.memoized import Memoized
+from cloudly.decorators import Memoized
 from cloudly import logger
 
 EC2_METADATA_URL = "http://169.254.169.254/latest/meta-data/"

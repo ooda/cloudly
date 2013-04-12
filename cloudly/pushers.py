@@ -1,3 +1,5 @@
+"""Publish to [Pusher](http://pusher.com/).
+"""
 import os
 import pusher
 

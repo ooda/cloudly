@@ -1,3 +1,7 @@
+"""Ease deployment of applications.
+
+WARNING: to be deprecated.
+"""
 from fabric.api import run
 from cuisine import (package_ensure, package_update, file_write,
                      python_package_ensure, mode_sudo, repository_ensure_apt,
