@@ -4,6 +4,7 @@ You might be interested in this decorator *cheat sheet*:
     https://gist.github.com/hdemers/5357602
 """
 from functools import wraps, partial
+from datetime import datetime, timedelta
 
 
 class Memoized(object):
@@ -70,6 +71,25 @@ def burst(nbursts=2):
             if len(cache) >= nbursts:
                 result = fn(cache, *args[1:], **kwargs)
                 del cache[:]
+            return result
+        return wrapped_fn
+    return decorator
+
+
+def throttle(milliseconds=5):
+    """Call the decorated function only when the given amount of milliseconds
+    has elapsed since the last call.
+    """
+    def decorator(fn):
+        delta = timedelta(milliseconds=milliseconds)
+        fn.last_call = datetime.now()
+
+        @wraps(fn)
+        def wrapped_fn(*args, **kwargs):
+            result = None
+            if  datetime.now() - fn.last_call >= delta:
+                result = fn(*args, **kwargs)
+                fn.last_call = datetime.now()
             return result
         return wrapped_fn
     return decorator
