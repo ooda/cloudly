@@ -1,13 +1,16 @@
+import os
 import itertools
 import urllib
 
-import boto.ec2 as ec2
+import boto
+from boto import ec2
 from boto.exception import EC2ResponseError
 
 from cloudly.decorators import Memoized
 from cloudly import logger
 
 EC2_METADATA_URL = "http://169.254.169.254/latest/meta-data/"
+DEFAULT_AMI_ID = "ami-0cdf4965"
 
 log = logger.init(__name__)
 
@@ -77,6 +80,7 @@ def get_hostname(service):
 
 @Memoized
 def is_running_on_ec2():
+    """Return true if the current process is running on an EC2 instance."""
     if _query():
         return True
     else:
@@ -84,6 +88,9 @@ def is_running_on_ec2():
 
 
 def get_best_ip_addresse(instance):
+    """Return the private ip address if running under EC2 or the public one
+    otherwise.
+    """
     if is_running_on_ec2():
         return instance.private_ip_address
     else:
@@ -193,3 +200,25 @@ def augment(instance):
     setattr(instance.__class__, "node_type", TagAttribute("node_type"))
     setattr(instance.__class__, "role", TagAttribute("role"))
     return instance
+
+
+def launch(ami_id=None, instance_type=None,
+           security_group=None, count=1, key_name=None, user_data=None):
+    """Launch a new AWS EC2 instance.
+    Parameters are taken from the function arguments or the environment.
+    """
+    ami_id = ami_id or os.environ.get("EC2_AMI_ID", DEFAULT_AMI_ID)
+    instance_type = instance_type or os.environ.get("EC2_INSTANCE_TYPE",
+                                                    'm1.small')
+    security_group = security_group or os.environ.get("EC2_SECURITY_GROUP",
+                                                      "default")
+    key_name = key_name or os.environ.get("USER")
+
+    connection = boto.connect_ec2()
+    reservation = connection.run_instances(ami_id,
+                                           min_count=count,
+                                           key_name=key_name,
+                                           instance_type=instance_type,
+                                           security_groups=[security_group],
+                                           user_data=user_data)
+    return reservation.instances
