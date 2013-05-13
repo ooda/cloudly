@@ -24,6 +24,6 @@ setup(
         'isodate==0.4.9',
         'cuisine==0.5.6',
         'pusher==0.7',
-        'tweepy==2.0',
+        'twitter==1.9.4',
     ]
 )
