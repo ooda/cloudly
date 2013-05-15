@@ -111,3 +111,15 @@ def throttle(milliseconds=5):
             return result
         return wrapped_fn
     return decorator
+
+
+def burst_generator(length, generator):
+    """Generator returning a burst of items from the given generator.
+    The length of the burst is given by parameter length.
+    """
+    burst = []
+    for item in generator:
+        burst.append(item)
+        if len(burst) >= length:
+            yield burst
+            burst = []
