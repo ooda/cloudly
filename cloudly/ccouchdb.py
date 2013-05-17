@@ -52,6 +52,14 @@ def get_server(hostname=None, port=None, username=None, password=None):
     return couchdb.Server(url)
 
 
+def get_or_create(server, database_name):
+    try:
+        database = server[database_name]
+    except couchdb.http.ResourceNotFound:
+        database = server.create(database_name)
+    return database
+
+
 def sync_design_doc(database_name, design_filename):
     """Sync a design document written as a YAML file."""
     with open(design_filename) as design_file:
