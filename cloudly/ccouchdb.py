@@ -42,13 +42,14 @@ def get_server(hostname=None, port=None, username=None, password=None):
             username=username,
             password=password
         )
+        log.info("{} port {}, authenticated".format(host, port))
     else:
         url = "http://{host}:{port}".format(
             host=host,
             port=port
         )
+        log.info("{} port {}".format(host, port))
 
-    log.info("{} port {}".format(host, port))
     return couchdb.Server(url)
 
 
@@ -60,16 +61,15 @@ def get_or_create(server, database_name):
     return database
 
 
-def sync_design_doc(database_name, design_filename):
+def sync_design_doc(database, design_filename):
     """Sync a design document written as a YAML file."""
     with open(design_filename) as design_file:
         design_doc = yaml.load(design_file)
     # Delete old document, to avoid ResourceConflict exceptions.
-    db = get_server()[database_name]
-    old = db.get(design_doc['_id'])
+    old = database.get(design_doc['_id'])
     if old:
-        db.delete(old)
-    db.save(design_doc)
+        database.delete(old)
+    database.save(design_doc)
 
 
 def update_feed(database_name, include_docs=False):
@@ -81,15 +81,3 @@ def update_feed(database_name, include_docs=False):
     return db.changes(feed='continuous',
                       include_docs=include_docs,
                       since=since)
-
-
-if __name__ == "__main__":
-    """Sync a design document to a database.
-    The design document must be written as a YAML file.
-    """
-    import sys
-    if len(sys.argv) != 3:
-        print("Povide the database name and the path to a YAML design doc")
-        sys.exit(1)
-    database_name, design_filename = sys.argv[1:]
-    sync_design_doc(database_name, design_filename)
