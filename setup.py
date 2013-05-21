@@ -25,5 +25,7 @@ setup(
         'cuisine==0.5.6',
         'pusher==0.7',
         'twitter==1.9.4',
+        'pubnub==3.3.1',
+        'pyyaml==3.10'
     ]
 )

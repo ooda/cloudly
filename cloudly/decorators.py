@@ -3,6 +3,7 @@
 You might be interested in this decorator *cheat sheet*:
     https://gist.github.com/hdemers/5357602
 """
+import inspect
 from functools import wraps, partial
 from datetime import datetime, timedelta
 
@@ -60,16 +61,31 @@ def burst(nbursts=2):
 
     Note: the return value of the wrapped function will be None when it's not
     actually called, i.e. in between bursts.
+
+    Can be applied to a function and a method.
     """
     def decorator(fn):
         cache = []
+        # This way of inspecting for a method is obviously fragile since it
+        # relies on the convention of naming the first argument `self`.
+        # Cf. http://stackoverflow.com/a/2436061
+        # But then again, we rely on the fact that the second argument is a
+        # list...
+        method = False
+        args = inspect.getargspec(fn).args
+        if args and args[0] == 'self':
+            method = True
 
         @wraps(fn)
         def wrapped_fn(*args, **kwargs):
-            cache.extend(args[0])
+            lst = args[1] if method else args[0]
+            cache.extend(lst)
             result = None
             if len(cache) >= nbursts:
-                result = fn(cache, *args[1:], **kwargs)
+                if method:
+                    result = fn(args[0], cache, *args[2:], **kwargs)
+                else:
+                    result = fn(cache, *args[1:], **kwargs)
                 del cache[:]
             return result
         return wrapped_fn
@@ -79,6 +95,8 @@ def burst(nbursts=2):
 def throttle(milliseconds=5):
     """Call the decorated function only when the given amount of milliseconds
     has elapsed since the last call.
+
+    Can be called on a function and a method.
     """
     def decorator(fn):
         delta = timedelta(milliseconds=milliseconds)
@@ -93,3 +111,15 @@ def throttle(milliseconds=5):
             return result
         return wrapped_fn
     return decorator
+
+
+def burst_generator(length, generator):
+    """Generator returning a burst of items from the given generator.
+    The length of the burst is given by parameter length.
+    """
+    burst = []
+    for item in generator:
+        burst.append(item)
+        if len(burst) >= length:
+            yield burst
+            burst = []
