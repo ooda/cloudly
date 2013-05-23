@@ -25,7 +25,9 @@ class Tweets(object):
     """
     def __init__(self, consumer_key=None, consumer_secret=None,
                  access_token=None, access_token_secret=None):
-
+        """Init with or without credentials. If not provided, they'll be taken
+        from the environment.
+        """
         if not (consumer_key and consumer_secret and
                 access_token and access_token_secret):
             consumer_key = os.environ['TWITTER_CONSUMER_KEY']
@@ -115,7 +117,8 @@ class StreamManager(object):
         {'counts': {
             'detection': 4403,
             'firehose': 1426307,
-            'stream': 122900
+            'stream': 122900,
+            'cached': 4
             }
         }
 
@@ -148,9 +151,9 @@ class StreamManager(object):
         self.cache_length = cache_length
 
     def run(self, generator):
-        """Gather tweets and either enqueue them processing either now or later
-        by a worker process. This behavior depends on the `is_queuing`
-        parameter.
+        """Gather tweets and either enqueue them for processing later by a
+        worker process or process them immediately. This behavior depends on
+        the `is_queuing` parameter.
         """
         for data in generator:
             # For some reason, sometime we can't jsonify TwitterResponseWrapper
@@ -158,18 +161,43 @@ class StreamManager(object):
 
             if 'limit' in data:
                 if self.metadata_processor_fct:
-                    self.metadata_processor(data['limit']['track'])
+                    # The argument firehose_count is the total number of
+                    # undelivered tweets since the connection was opened. Since
+                    # we want to count irrespective of connection
+                    # opening/closing we compute a delta since last count and
+                    # add that to the firehose count. This allows us to keep a
+                    # correct count in-between connections.
+                    firehose_count = data['limit']['track']
+                    firehose_delta = firehose_count - int(
+                        (self.redis.getset(self.firehose_count_key,
+                                           firehose_count) or 0))
+
+                    self.redis.hincrby(self.metadata_cache_key, 'firehose',
+                                       firehose_delta)
             else:
                 self.tweet_cache.append(data)
+                # Increment the total number of tweets in the stream.
+                self.redis.hincrby(self.metadata_cache_key, "stream", 1)
+                # Increment the total number of tweets in the firehose.
+                # Remember, the firehose count provided by Twitter (track)
+                # is the number of undelivered tweets:
+                # Total = undelivered + delivered
+                self.redis.hincrby(self.metadata_cache_key, 'firehose', 1)
+
                 if len(self.tweet_cache) >= self.cache_length:
-                    self.redis.hincrby(self.metadata_cache_key, "stream",
-                                       len(self.tweet_cache))
                     if self.is_queuing:
                         rqworker.enqueue(self.tweet_processor,
                                          self.tweet_cache)
                     else:
                         self.tweet_processor(self.tweet_cache)
+                    # Empty cache for next batch.
                     self.tweet_cache = []
+
+            # We might not receive limit message, be sure to call
+            # metadata_processor. Don't have to worry calling it too often,
+            # it's throttled.
+            if self.metadata_processor_fct:
+                self.metadata_processor()
 
     def __getstate__(self):
         return {attr: getattr(self, attr, None) for attr in self.__attrs__}
@@ -181,29 +209,31 @@ class StreamManager(object):
         self.redis = cache.get_redis_connection()
 
     def tweet_processor(self, tweets):
-        """Process tweets now or later by a worker. This is the function put on
-        the queue."""
+        """Process tweets by calling the user provided function. Note that the
+        function must return the number of positive detections, or else you
+        won't have a count of detections.
+        """
         log.debug("Processing {!r} tweets".format(len(tweets)))
         detection_count = self.tweet_processor_fct(tweets) or 0
+        # Increment the total number of detections.
         self.redis.hincrby(self.metadata_cache_key, 'detection',
                            detection_count)
 
     @throttle(milliseconds=4000)
-    def metadata_processor(self, firehose_count):
-        """Computes counts and other metadata about this stream.
+    def metadata_processor(self):
+        """Compute counts and other metadata about this stream.
         Send results to the user provided processor function. The decorator
         makes sure we don't queue too often by waiting for the given amount of
         time between successive calls.
         """
-        firehose_delta = firehose_count - int(
-            (self.redis.getset(self.firehose_count_key, firehose_count) or 0))
-
-        self.redis.hincrby(self.metadata_cache_key, 'firehose', firehose_delta)
         counts = {key: int(value) for key, value in
                   self.redis.hgetall(self.metadata_cache_key).iteritems()}
 
+        counts['cached'] = len(self.tweet_cache)
+
         metadata = {'counts': counts}
         log.debug(metadata)
+
         if self.is_queuing:
             rqworker.enqueue(self.metadata_processor_fct, metadata)
         else:
