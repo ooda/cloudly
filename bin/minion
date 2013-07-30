@@ -1,0 +1,98 @@
+#!/usr/bin/env python
+"""
+SALT_MASTER_HOSTNAME or hostname
+EC2_AMI_ID
+EC2_INSTANCE_TYPE
+EC2_SECURITY_GROUP
+USER
+
+"""
+import argparse
+import os
+import platform
+
+from termcolor import colored
+
+from cloudly import minion
+from cloudly.aws import ec2
+
+
+def parse():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("action",
+                        choices=['launch', 'terminate', 'ssh', 'reboot'],
+                        help="action to perform")
+
+    parser.add_argument("-p", "--id-postfix", help="minion's id postfix")
+
+    parser.add_argument("-a", "--ami-id",
+                        help="the AMI id to launch")
+
+    parser.add_argument("-t", "--instance-type",
+                        help="the instance type to launch")
+
+    parser.add_argument("-s", "--security-group",
+                        help="the security group to launch under")
+    return parser.parse_args()
+
+
+def launch(minion_id_postfix, ami_id, instance_type, security_group):
+    master_hostname = os.environ.get("SALT_MASTER_HOSTNAME", platform.node())
+
+    ami_id = ami_id or os.environ.get("EC2_AMI_ID")
+    security_group = security_group or os.environ.get("EC2_SECURITY_GROUP",
+                                                      "default")
+    instance_type = instance_type or os.environ.get("EC2_INSTANCE_TYPE",
+                                                    'm1.small')
+    print(colored(
+        "Lauching 1 instance {} of type {} with security group {!r}.".format(
+            ami_id, instance_type, security_group), 'yellow'))
+
+    instances = minion.launch(master_hostname, minion_id_postfix,
+                              ami_id=ami_id,
+                              instance_type=instance_type,
+                              security_group="default")
+
+    instance = instances[0]
+    minion_id = instance.tags['minion_id']
+
+    print(colored("Instance running and ready at '{}'.".format(
+        instance.public_dns_name), 'yellow'))
+    print(colored("Minion id is '{}'".format(minion_id), 'yellow'))
+
+
+def choose_minion():
+    instances = ec2.all()
+    if len(instances) == 1:
+        return instances[0]
+
+    minion.print_minions(instances)
+    index = raw_input("\nChoose AMI instance (None): ")
+    instance = None
+    if index.isdigit() and int(index) < len(instances):
+        instance = instances[int(index)]
+    return instance
+
+
+def terminate():
+    instance = choose_minion()
+    minion.terminate(instance)
+    name = instance.tags.get('Name')
+    if name:
+        msg = colored("Instance {} ({}) will be terminated.".format(
+            name, instance.id), 'red')
+    else:
+        msg = colored("Instance {} will be terminated.".format(
+            instance.id), 'red')
+    print(msg)
+
+
+if __name__ == '__main__':
+    args = parse()
+
+    if args.action == 'launch':
+        launch(args.id_postfix, args.ami_id, args.instance_type,
+               args.security_group)
+    elif args.action == 'terminate':
+        terminate()
