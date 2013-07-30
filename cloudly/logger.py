@@ -27,11 +27,17 @@ except KeyError, exception:
                log_level_string))
     default_log_level = INFO
 
+loggers = {}
 
-def init(name, log_level=default_log_level):
+
+def init(name=None, log_level=default_log_level):
     """Create logger with a default format. """
-    logger = logging.getLogger(name)
-    configure_logger(logger, log_level)
+    if name in loggers:
+        logger = loggers.get(name)
+    else:
+        logger = logging.getLogger(name)
+        configure_logger(logger, log_level)
+        loggers[name] = logger
     return logger
 
 
