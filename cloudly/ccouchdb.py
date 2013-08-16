@@ -15,7 +15,8 @@ log = logger.init(__name__)
 
 
 @Memoized
-def get_server(hostname=None, port=None, username=None, password=None):
+def get_server(hostname=None, port=None, username=None, password=None,
+               secure=True):
     """Return a server instance.
 
     The following heuristic is used to find the server:
@@ -24,6 +25,8 @@ def get_server(hostname=None, port=None, username=None, password=None):
         - use the service finder of cloudly.aws.ec2 to look up a couchdb
           server if none was found so far,
         - else use 127.0.0.1
+
+    If secure is True, we'll use HTTPS.
     """
     host = (
         hostname or
@@ -31,22 +34,25 @@ def get_server(hostname=None, port=None, username=None, password=None):
         ec2.get_hostname("couchdb") or
         "127.0.0.1"
     )
-    port = port or os.environ.get("COUCHDB_PORT", 5984)
+    protocol = "https" if secure else "http"
+    port = port or os.environ.get("COUCHDB_PORT", 443 if secure else 5984)
     username = username or os.environ.get("COUCHDB_USERNAME", None)
     password = password or os.environ.get("COUCHDB_PASSWORD", None)
 
     if username is not None and password is not None:
-        url = "http://{username}:{password}@{host}:{port}".format(
+        url = "{protocol}://{username}:{password}@{host}:{port}".format(
+            protocol=protocol,
             host=host,
             port=port,
             username=username,
-            password=password
+            password=password,
         )
         log.info("{} port {}, authenticated".format(host, port))
     else:
-        url = "http://{host}:{port}".format(
+        url = "{protocol}://{host}:{port}".format(
+            protocol=protocol,
             host=host,
-            port=port
+            port=port,
         )
         log.info("{} port {}".format(host, port))
 
