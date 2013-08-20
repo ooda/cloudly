@@ -18,6 +18,7 @@ def parse():
 def save(key):
     with open(basename(key.name), "w") as f:
         key.get_contents_to_file(f)
+    print "Saved '{}'".format(basename(key.name))
 
 
 if __name__ == '__main__':
@@ -34,8 +35,8 @@ if __name__ == '__main__':
         bucket = conn.get_bucket(bucket_name)
 
         if key_name.find("*") != -1:
-            keys.extend(key for key in bucket.list() if fnmatch(key.name,
-                                                                key_name))
+            keys.extend(key for key in bucket.list()
+                        if fnmatch(key.name, key_name) and basename(key.name))
         else:
             key = bucket.get_key(key_name)
             if not key:
