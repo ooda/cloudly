@@ -19,6 +19,11 @@ created. This script will call another user-provided script called
 *venv-build.sh* in which your commands for installing python packages should
 be (e.g. `pip install` commands).
 
+We generally want Python compiled with SSL support and that's why we make sure
+libssl-dev is installed. Also, we want the UCS-4 internal unicode
+representation. That's why we explicitly set the compile flag
+*--enable-unicode=ucs4*.
+
 bootstrap.sh
 ------------
 

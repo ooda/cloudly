@@ -35,7 +35,7 @@ cd
 wget http://www.python.org/ftp/python/2.7.3/Python-2.7.3.tgz
 tar -xzf Python-2.7.3.tgz
 cd Python-2.7.3
-sudo ./configure --enable-shared --prefix=/usr
+sudo ./configure --enable-shared --prefix=/usr --enable-unicode=ucs4
 sudo make && sudo make install
 
 python --version
