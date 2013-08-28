@@ -1,15 +1,18 @@
 #!/usr/bin/env python
 """
-SALT_MASTER_HOSTNAME or hostname
-EC2_AMI_ID
-EC2_INSTANCE_TYPE
-EC2_SECURITY_GROUP
-USER
+Launch one or more EC2 instances, install the Salt Stack minion daemon and
+optionally execute a Salt state. The AMI ID can be specified on the
+command-line, if not will be taken from the environment variable EC2_AMI_ID.
+The default security group is DEFAULT_SECURITY_GROUP and the default instance
+type is DEFAULT_INSTANCE_TYPE.
 
+The Salt master hostname is the server hostname on we're running or if defined
+the environment variable SALT_MASTER_HOSTNAME.
 """
 import argparse
 import os
 import platform
+from time import sleep
 
 from termcolor import colored
 
@@ -17,11 +20,24 @@ from cloudly import minion
 from cloudly.aws import ec2
 
 
+DEFAULT_SECURITY_GROUP = "default"
+DEFAULT_INSTANCE_TYPE = "m1.small"
+
+
 def parse():
-    parser = argparse.ArgumentParser()
+    description = """
+    Launch one or more EC2 instances, install the Salt Stack minion daemon and
+    optionally execute a Salt state. The AMI ID can be specified on the
+    command-line, if not will be taken from the environment variable
+    EC2_AMI_ID. The default security group is '{}' and the default instance
+    type is '{}'. The Salt master hostname is the server hostname we're
+    running on or if defined the environment variable SALT_MASTER_HOSTNAME.
+    """.format(DEFAULT_SECURITY_GROUP, DEFAULT_INSTANCE_TYPE)
+
+    parser = argparse.ArgumentParser(description=description)
 
     parser.add_argument("action",
-                        choices=['launch', 'terminate', 'ssh', 'reboot'],
+                        choices=['launch', 'terminate', 'reboot'],
                         help="action to perform")
 
     parser.add_argument("-p", "--id-postfix", help="minion's id postfix")
@@ -32,22 +48,33 @@ def parse():
     parser.add_argument("-t", "--instance-type",
                         help="the instance type to launch")
 
-    parser.add_argument("-s", "--security-group",
+    parser.add_argument("-g", "--security-group",
                         help="the security group to launch under")
+
+    parser.add_argument("-s", "--state",
+                        help="the Salt state to execute")
+
+    parser.add_argument("-e", "--env", default="dev",
+                        help="the Salt environment, e.g. prod, dev")
+
     return parser.parse_args()
 
 
-def launch(minion_id_postfix, ami_id, instance_type, security_group):
+def launch(minion_id_postfix, ami_id, instance_type, security_group,
+           salt_state=None, salt_env=None):
     master_hostname = os.environ.get("SALT_MASTER_HOSTNAME", platform.node())
 
     ami_id = ami_id or os.environ.get("EC2_AMI_ID")
     security_group = security_group or os.environ.get("EC2_SECURITY_GROUP",
-                                                      "default")
+                                                      DEFAULT_SECURITY_GROUP)
     instance_type = instance_type or os.environ.get("EC2_INSTANCE_TYPE",
-                                                    'm1.small')
+                                                    DEFAULT_INSTANCE_TYPE)
     print(colored(
         "Lauching 1 instance {} of type {} with security group {!r}.".format(
             ami_id, instance_type, security_group), 'yellow'))
+    if salt_state:
+        print(colored("Will execute Salt state '{}' within '{}' env".format(
+            salt_state, salt_env), 'yellow'))
 
     instances = minion.launch(master_hostname, minion_id_postfix,
                               ami_id=ami_id,
@@ -60,6 +87,15 @@ def launch(minion_id_postfix, ami_id, instance_type, security_group):
     print(colored("Instance running and ready at '{}'.".format(
         instance.public_dns_name), 'yellow'))
     print(colored("Minion id is '{}'".format(minion_id), 'yellow'))
+
+    if salt_state:
+        # This wait period seems necessary before salt-minion becomes
+        # responsive.
+        sleep(30)
+        print(colored("Executing Salt state '{}'".format(salt_state),
+                      'yellow'))
+        print(minion.salt_state(salt_state, minion_id, salt_env))
+    print("done.")
 
 
 def choose_minion():
@@ -93,6 +129,6 @@ if __name__ == '__main__':
 
     if args.action == 'launch':
         launch(args.id_postfix, args.ami_id, args.instance_type,
-               args.security_group)
+               args.security_group, args.state, args.env)
     elif args.action == 'terminate':
         terminate()

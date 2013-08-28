@@ -85,11 +85,13 @@ def reboot(instances):
         ready = all(results)
 
 
-def salt_state(state, minion_id):
-    return shell("/usr/bin/salt '{}' state.sls {}".format(minion_id, state))
+def salt_state(state, minion_id, env):
+    # TODO: Salt returns an error code 0 even when it errors out. Bummer.
+    return shell("/usr/bin/salt {} state.sls {} {}".format(minion_id, state,
+                                                           env))
 
 
-def salt(cmd, minion):
+def salt_cmd(cmd, minion):
     return jshell("/usr/bin/salt '{}' {}".format(minion, cmd))
 
 
@@ -98,6 +100,8 @@ def jshell(cmd):
 
 
 def shell(cmd):
+    # Note: shell=True is necessary for salt commands to be executed as the
+    # authorized user. See the *user* option in /etc/salt/master.
     return check_output(cmd, shell=True)
 
 
