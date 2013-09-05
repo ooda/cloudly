@@ -16,7 +16,7 @@ log = logger.init(__name__)
 
 @Memoized
 def get_server(hostname=None, port=None, username=None, password=None,
-               secure=True):
+               protocol=None):
     """Return a server instance.
 
     The following heuristic is used to find the server:
@@ -26,7 +26,6 @@ def get_server(hostname=None, port=None, username=None, password=None,
           server if none was found so far,
         - else use 127.0.0.1
 
-    If secure is True, we'll use HTTPS.
     """
     host = (
         hostname or
@@ -34,8 +33,9 @@ def get_server(hostname=None, port=None, username=None, password=None,
         ec2.get_hostname("couchdb") or
         "127.0.0.1"
     )
-    protocol = "https" if secure else "http"
-    port = port or os.environ.get("COUCHDB_PORT", 443 if secure else 5984)
+    protocol = protocol or os.environ.get("COUCHDB_PROTOCOL", "http")
+    port = port or os.environ.get("COUCHDB_PORT",
+                                  443 if protocol == "https" else 5984)
     username = username or os.environ.get("COUCHDB_USERNAME", None)
     password = password or os.environ.get("COUCHDB_PASSWORD", None)
 
