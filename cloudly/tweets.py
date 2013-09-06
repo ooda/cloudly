@@ -1,6 +1,6 @@
 import os
 from os.path import join
-from datetime import date
+from datetime import date, datetime
 import gzip
 import json
 
@@ -8,6 +8,7 @@ from twitter import TwitterStream, OAuth
 from cloudly import rqworker, logger, cache
 from cloudly.decorators import throttle
 from cloudly.dictutils import merge, find_item
+from cloudly.timer import Timer
 
 
 log = logger.init(__name__)
@@ -108,7 +109,7 @@ class StreamManager(object):
     `tweet_processor_fct` and `metadata_processor_fct`.
 
     The manager also takes care of counting: firehose messages, tweets sent
-    down to us (the stream) and detections has established by the tweet
+    down to us (the stream) and detections as established by the tweet
     processor function, which for that must return the number of detections.
 
     Every so often, a dict object is sent to the metadata processor function.
@@ -146,6 +147,7 @@ class StreamManager(object):
         self.tweet_processor_fct = tweet_processor
         self.metadata_processor_fct = metadata_processor
         self.is_queuing = is_queuing
+        self.previous_queue_time = None
 
         self.tweet_cache = []
         self.cache_length = cache_length
@@ -188,6 +190,14 @@ class StreamManager(object):
                     if self.is_queuing:
                         rqworker.enqueue(self.tweet_processor,
                                          self.tweet_cache)
+                        now = datetime.now()
+                        if self.previous_queue_time:
+                            delta_time = now - self.previous_queue_time
+                            log.debug(
+                                "Queuing {} tweets. Elapsed {:2.2f} secs.".format(
+                                    len(self.tweet_cache),
+                                    delta_time.total_seconds()))
+                        self.previous_queue_time = now
                     else:
                         self.tweet_processor(self.tweet_cache)
                     # Empty cache for next batch.
@@ -213,11 +223,14 @@ class StreamManager(object):
         function must return the number of positive detections, or else you
         won't have a count of detections.
         """
-        log.debug("Processing {!r} tweets".format(len(tweets)))
-        detection_count = self.tweet_processor_fct(tweets) or 0
-        # Increment the total number of detections.
-        self.redis.hincrby(self.metadata_cache_key, 'detection',
-                           detection_count)
+        with Timer() as timer:
+            detection_count = self.tweet_processor_fct(tweets) or 0
+            # Increment the total number of detections.
+            self.redis.hincrby(self.metadata_cache_key, 'detection',
+                               detection_count)
+
+        log.debug("Processed {} tweets in {:2.3f} secs.".format(
+            len(tweets), timer.interval))
 
     @throttle(milliseconds=4000)
     def metadata_processor(self):
