@@ -14,7 +14,7 @@ setup(
     url='https://github.com/ooda/cloudly',
     license=__license__,
     packages=find_packages(exclude=('tests', 'docs')),
-    scripts=['bin/sshaws', 'bin/launch', 'bin/s3get'],
+    scripts=['bin/sshaws', 'bin/launch', 'bin/s3get', 'bin/minion'],
     install_requires=[
         'boto',
         'redis',
@@ -22,10 +22,10 @@ setup(
         'couchdb',
         'python-memcached',
         'isodate',
-        'cuisine',
         'pusher',
         'twitter',
         'pubnub',
-        'pyyaml'
+        'pyyaml',
+        'termcolor'
     ]
 )

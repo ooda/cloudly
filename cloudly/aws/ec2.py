@@ -1,4 +1,5 @@
 import os
+import sys
 import itertools
 import urllib
 
@@ -222,3 +223,32 @@ def launch(ami_id=None, instance_type=None,
                                            security_groups=[security_group],
                                            user_data=user_data)
     return reservation.instances
+
+
+def print_instances(instances, show_terminated=False):
+    """Print out list of hosts. Set only_running to false
+    to also print out turned off machines."""
+    for index, instance in enumerate(instances):
+        if instance.state == "running" or show_terminated:
+            sys.stdout.write(("{index:>4}: {name:<20} "
+                              "{instance.ip_address:<16} "
+                              "{launch_time:<12} {instance.id:<12} "
+                              "{instance.image_id:<13}\n").format(
+                                  index=index,
+                                  instance=instance,
+                                  launch_time=instance.launch_time[:10],
+                                  name=instance.tags.get("Name", "no name")
+                              ))
+
+
+def choose_instance():
+    instances = all()
+    if len(instances) == 1:
+        return instances[0]
+
+    print_instances(instances)
+    index = raw_input("\nChoose AMI instance (None): ")
+    instance = None
+    if index.isdigit() and int(index) < len(instances):
+        instance = instances[int(index)]
+    return instance
