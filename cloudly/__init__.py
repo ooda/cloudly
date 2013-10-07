@@ -1,6 +1,6 @@
 __title__ = "cloudly"
 __title__ = 'A helper library for everything cloud.'
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 __author__ = "Hugues Demers"
 __email__ = "hugues.demers@ooda.ca"
 __license__ = "MIT"
