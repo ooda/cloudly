@@ -5,11 +5,16 @@ Currently available:
     - [PubNub](http://www.pubnub.com/)
 """
 import os
+import json
 
 import pusher
 import Pubnub as pubnub
+import gevent
 
 from cloudly.decorators import Memoized
+from cloudly import cache, logger
+
+log = logger.init(__name__)
 
 
 class Pubsub(object):
@@ -104,3 +109,54 @@ class Pubnub(Pubsub):
     def _connect(cls, publish_key, subscribe_key, secret_key, ssl_on=False):
         return pubnub.Pubnub(publish_key, subscribe_key,
                              secret_key=secret_key, ssl_on=ssl_on)
+
+
+class RedisWebSocket(Pubsub):
+    """A pubsub service using Redis. Only supports WebSockets.
+    """
+
+    provider_name = "redis"
+
+    def __init__(self, channel):
+        super(RedisWebSocket, self).__init__(channel)
+        self.websockets = []
+        self.redis = cache.get_redis_connection()
+        self.pubsub = self.redis.pubsub()
+        self.pubsub.subscribe(self.channel)
+
+    def publish(self, message, event=None):
+        log.debug("Publishing to channel '{}'".format(self.channel))
+        self.redis.publish(self.channel, json.dumps(message))
+
+    def __iter_data(self):
+        for message in self.pubsub.listen():
+            log.debug("Received message from Redis.")
+            if message['type'] == 'message':
+                data = message.get('data')
+                yield data
+
+    def register(self, websocket):
+        """Register a WebSocket connection for Redis updates."""
+        log.debug("Registered new websocket from {}".format(websocket.origin))
+        self.websockets.append(websocket)
+
+    def send(self, websocket, data):
+        """Send given data to the registered websocket.
+        Automatically discards invalid connections."""
+        try:
+            websocket.send(data)
+        except Exception:
+            self.websockets.remove(websocket)
+            log.debug("Websocket was closed. Removed.")
+
+    def run(self):
+        """Listens for new messages in Redis, and sends them to websockets."""
+        log.debug("Listening for messages from redis.")
+        for data in self.__iter_data():
+            for websocket in self.websockets:
+                gevent.spawn(self.send, websocket, data)
+
+    def spawn(self):
+        """Maintains Redis subscription in the background."""
+        log.debug("Spawning a greenlet.")
+        return gevent.spawn(self.run)
