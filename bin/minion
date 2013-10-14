@@ -79,7 +79,7 @@ def launch(minion_id_postfix, ami_id, instance_type, security_group,
     instances = minion.launch(master_hostname, minion_id_postfix,
                               ami_id=ami_id,
                               instance_type=instance_type,
-                              security_group="default")
+                              security_group=security_group)
 
     instance = instances[0]
     minion_id = instance.tags['minion_id']
