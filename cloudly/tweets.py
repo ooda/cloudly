@@ -38,6 +38,7 @@ class Tweets(object):
 
         self.oauth = OAuth(access_token, access_token_secret,
                            consumer_key, consumer_secret)
+        log.debug("Connecting to Twitter.")
         self.stream = TwitterStream(auth=self.oauth)
 
         self.default_coordinates = [-180, -90, 180, 90]
@@ -152,12 +153,16 @@ class StreamManager(object):
         self.tweet_cache = []
         self.cache_length = cache_length
 
-    def run(self, generator):
+    def run(self, generator, stop_condition_fct=None):
         """Gather tweets and either enqueue them for processing later by a
         worker process or process them immediately. This behavior depends on
         the `is_queuing` parameter.
         """
+        log.debug("Starting collection.")
         for data in generator:
+            if stop_condition_fct and stop_condition_fct():
+                log.debug("Stopped.")
+                return
             # For some reason, sometime we can't jsonify TwitterResponseWrapper
             data = dict(data)
 
@@ -194,7 +199,7 @@ class StreamManager(object):
                         if self.previous_queue_time:
                             delta_time = now - self.previous_queue_time
                             log.debug(
-                                "Queuing {} tweets. Elapsed {:2.2f} secs.".format(
+                                "Queued {}. Elapsed {:2.2f} secs.".format(
                                     len(self.tweet_cache),
                                     delta_time.total_seconds()))
                         self.previous_queue_time = now
@@ -208,6 +213,7 @@ class StreamManager(object):
             # it's throttled.
             if self.metadata_processor_fct:
                 self.metadata_processor()
+        log.debug("Terminating.")
 
     def __getstate__(self):
         return {attr: getattr(self, attr, None) for attr in self.__attrs__}
