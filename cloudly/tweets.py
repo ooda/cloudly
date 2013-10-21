@@ -4,6 +4,7 @@ from datetime import date, datetime
 import gzip
 import json
 
+import twitter.stream
 from twitter import TwitterStream, OAuth
 from cloudly import rqworker, logger, cache
 from cloudly.decorators import throttle
@@ -25,7 +26,7 @@ class Tweets(object):
 
     """
     def __init__(self, consumer_key=None, consumer_secret=None,
-                 access_token=None, access_token_secret=None):
+                 access_token=None, access_token_secret=None, timeout=None):
         """Init with or without credentials. If not provided, they'll be taken
         from the environment.
         """
@@ -38,10 +39,24 @@ class Tweets(object):
 
         self.oauth = OAuth(access_token, access_token_secret,
                            consumer_key, consumer_secret)
-        log.debug("Connecting to Twitter.")
-        self.stream = TwitterStream(auth=self.oauth)
 
         self.default_coordinates = [-180, -90, 180, 90]
+
+        # This is an attempt to handle zombie connections, i.e. connections
+        # that seem to be alive, but are in fact dead. The current timeout for
+        # blocking sockets is way too long for our purpose. We now have the
+        # option to set a much shorter timeout. This is a hack and should be
+        # ported in upstream. Maybe open a pull request?
+        def handle_stream_response(req, uri, arg_data, block):
+            handle = twitter.stream.urllib_request.urlopen(req,
+                                                           timeout=timeout)
+            return iter(twitter.stream.TwitterJSONIter(handle, uri, arg_data,
+                                                       block))
+
+        twitter.stream.handle_stream_response = handle_stream_response
+
+        log.debug("Connecting to Twitter.")
+        self.stream = TwitterStream(auth=self.oauth)
 
     def having(self, wordlist=None, coordinates=None):
         """Track tweets potientially filtering them.
