@@ -9,6 +9,8 @@ ARCH=`uname -m`
 VENV=venv
 PYTHON_BINARIES=Python-2.7.binaries.$ARCH.tar.gz
 
+echo "** Building for $ARCH"
+echo "** Using bucket $S3_BUCKET"
 
 cd
 hadoop fs -get s3n://$S3_BUCKET/$PYTHON_BINARIES ./

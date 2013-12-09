@@ -7,7 +7,7 @@
 #
 # You'll need two scripts for this:
 #
-# - bin-build.sh: this script.
+# - build-binaries.sh: this script.
 # - venv-build.sh: contains the instructions for building your customized
 #   virtualenv.
 #
@@ -30,7 +30,7 @@ VENV=venv
 
 # Install python 2.7 with SSL support
 starttime=`date +%s`
-sudo apt-get install libssl-dev
+sudo apt-get -y install libssl-dev
 cd
 wget http://www.python.org/ftp/python/2.7.3/Python-2.7.3.tgz
 tar -xzf Python-2.7.3.tgz
@@ -60,8 +60,21 @@ echo "** Installed python libraries in $((`date +%s` - $starttime)) sec"
 # virtualenv is all you need as long as you always deploy it to the right place
 virtualenv --relocatable $VENV
 
+PYTHON_BINARIES=Python-2.7.binaries.$ARCH.tar.gz
+VENV_BINARIES=$VENV-virtualenv.binaries.$ARCH.tar.gz
 # Zip up tarballs and send them to s3
-tar -czf Python-2.7.binaries.$ARCH.tar.gz Python-2.7.3
-hadoop fs -put Python-2.7.binaries.$ARCH.tar.gz s3n://$S3_BUCKET/Python-2.7.binaries.$ARCH.tar.gz
-tar -czf $VENV-virtualenv.binaries.$ARCH.tar.gz $VENV
-hadoop fs -put $VENV-virtualenv.binaries.$ARCH.tar.gz s3n://$S3_BUCKET/$VENV-virtualenv.binaries.$ARCH.tar.gz
+tar -czf $PYTHON_BINARIES Python-2.7.3
+tar -czf $VENV_BINARIES $VENV
+# Don't exit the shell if we try to remove non-existent files on S3.
+set +e
+# Hadoop can't overide existing files. Remove them first.
+hadoop fs -rm s3n://$S3_BUCKET/$PYTHON_BINARIES
+hadoop fs -put $PYTHON_BINARIES s3n://$S3_BUCKET/$PYTHON_BINARIES
+hadoop fs -rm s3n://$S3_BUCKET/$VENV_BINARIES
+hadoop fs -put $VENV_BINARIES s3n://$S3_BUCKET/$VENV_BINARIES
+
+
+echo "** Python and virtualenv binaries"
+echo "**     $PYTHON_BINARIES"
+echo "**     $VENV_BINARIES"
+echo "** have been copied into the S3 bucket $S3_BUCKET"
