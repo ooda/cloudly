@@ -13,4 +13,4 @@ if [ $? -eq 0 ] ; then
     source $HOME/env.sh
 fi
 
-python -m $1
+python -m $*
