@@ -31,6 +31,19 @@ def set(bucket_name, key_name, obj, metadata=None, acl=None):
     return key.key
 
 
+def write_file(bucket_name, key_name, filename):
+    bucket = _get_conn().get_bucket(bucket_name)
+    key = bucket.get_key(key_name)
+    if key is None:
+        # Create a new key.
+        key = s3.Key(bucket)
+
+    # Set key unique name
+    key.key = key_name
+    # Store the document.
+    key.set_contents_from_filename(filename)
+
+
 def get(bucket_name, key_name, metakeys=None):
     key = _get_key(key_name, bucket_name)
 
