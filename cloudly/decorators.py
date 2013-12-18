@@ -6,6 +6,8 @@ You might be interested in this decorator *cheat sheet*:
 import inspect
 from functools import wraps, partial
 from datetime import datetime, timedelta
+import cProfile
+import pstats
 
 
 class Memoized(object):
@@ -123,3 +125,44 @@ def burst_generator(length, generator):
         if len(burst) >= length:
             yield burst
             burst = []
+
+
+def profile(sort="tottime", return_pstats=False):
+    def decorator(fn):
+        @wraps(fn)
+        def wrapped_fn(*args, **kwargs):
+            profile = cProfile.Profile()
+            try:
+                profile.enable()
+                result = fn(*args, **kwargs)
+                profile.disable()
+                ps = pstats.Stats(profile)
+                if return_pstats:
+                    return ps
+                else:
+                    return result
+            finally:
+                if not return_pstats:
+                    ps.sort_stats(sort)
+                    ps.print_stats()
+        return wrapped_fn
+    return decorator
+
+
+def line_profile(follow=[]):
+    from line_profiler import LineProfiler
+
+    def decorator(fn):
+        @wraps(fn)
+        def wrapped_fn(*args, **kwargs):
+            try:
+                profiler = LineProfiler()
+                profiler.add_function(fn)
+                for f in follow:
+                    profiler.add_function(f)
+                profiler.enable_by_count()
+                return fn(*args, **kwargs)
+            finally:
+                profiler.print_stats()
+        return wrapped_fn
+    return decorator

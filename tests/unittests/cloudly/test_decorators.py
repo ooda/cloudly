@@ -1,7 +1,7 @@
 from time import sleep
 from datetime import datetime, timedelta
 
-from cloudly.decorators import burst, throttle
+from cloudly.decorators import burst, throttle, profile, line_profile
 
 
 def test_burst():
@@ -67,3 +67,31 @@ def test_throttle():
         else:
             assert result is None
         sleep(interval)
+
+
+def test_profile():
+    def get_number():
+        for x in xrange(5000000):
+            yield x
+
+    @profile()
+    def expensive_function():
+        for x in get_number():
+            i = x ^ x ^ x
+        return i
+
+    expensive_function()
+
+
+def test_line_profile():
+    def get_number():
+        for x in xrange(50000):
+            yield x
+
+    @line_profile(follow=[get_number])
+    def expensive_function():
+        for x in get_number():
+            i = x ^ x ^ x
+        return i
+
+    expensive_function()
