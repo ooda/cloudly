@@ -5,7 +5,7 @@ couchdb==0.8
 python-memcached==1.48
 isodate==0.4.9
 pusher==0.7
-twitter==1.9.4
+git+https://github.com/adonoho/twitter.git@pr-fix-stream#egg=twitter
 pubnub==3.3.1
 pyyaml==3.10
 termcolor==1.1.0
