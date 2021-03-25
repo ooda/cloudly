@@ -7,7 +7,7 @@ isodate==0.4.9
 pusher==0.7
 git+https://github.com/adonoho/twitter.git@pr-fix-stream#egg=twitter
 pubnub==3.3.1
-pyyaml==3.10
+pyyaml==5.4
 termcolor==1.1.0
 gevent==0.13.8
 gevent-websocket==0.3.6
